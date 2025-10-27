@@ -254,6 +254,11 @@ export def show_task_array_status [
 	--color-pending:string = dark_gray
 	--color-active:string = purple
 	--color-summary:string = blue
+
+	--status-success:string = SUCCESS
+	--status-error:string = ERROR
+	--status-cancelled:string = CANCELLED
+	--status-active:string = IN_PROGRESS
 ] {
 	let tasks = $in
 	let tasks_count = $tasks | length
@@ -262,13 +267,12 @@ export def show_task_array_status [
 	let complete_count = $tasks | where {|t| $t.status in [SUCCESS FAILURE CANCELLED]} | length
 
 	let grid = $tasks | each {|t|
-		match $t.status {
-			'SUCCESS' => { $'(ansi $color_success)  ' }
-			'ERROR' => { $'(ansi $color_failure)  ' }
-			'CANCELLED' => { $'(ansi $color_failure)󰜺  ' }
-			'IN_PROGRESS' => { $'(ansi $color_active)  ' }
-			_ => { $'(ansi $color_pending)  ' }
-		} | $'($in)($t.name)(ansi reset)'
+		if ($t.status == $status_success) { $'(ansi $color_success)  '
+		} else if ($t.status == $status_error) { $'(ansi $color_failure)  '
+		} else if ($t.status == $status_cancelled) { $'(ansi $color_failure)󰜺  '
+		} else if ($t.status == $status_active) { $'(ansi $color_active)  '
+		} else { $'(ansi $color_pending)  ' }
+		| $'($in)($t.name)(ansi reset)'
 	} | grid --width $grid_width --separator '  '
 
 	if not $hide_summary {
