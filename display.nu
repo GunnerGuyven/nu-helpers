@@ -31,7 +31,7 @@ export def show_match [
 ] {
 	let data = $in
 	let s = if ($show | is-empty) {
-		if $regex { '$1' } else { $match }
+		if $regex { '$0' } else { $match }
 		| color $highlight_color
 	} else { $show }
 
