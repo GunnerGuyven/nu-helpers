@@ -19,3 +19,36 @@ export def replace_file [
 		mv ($backup_file_path + '.1') $file_path
 	}
 }
+
+# Takes in path to a torrent file and outputs the list of files in that torrent
+export def torrent_files [] : string -> list<string> {
+	if (plugin list | where name == 'from_bencode' | is-empty) {
+		error make {
+			msg: "Plugin 'from_bencode' required for this operation"
+		}
+	}
+
+	$in | do { nu -c $"open '($in)' | from bencode | to nuon --raw" }
+	| from nuon | get info.files | where attr? != p | get path | flatten
+}
+
+export def super_rename [] {
+	let files = $in
+	if ( $files | is-empty ) {
+		print $"(ls | length) Files in current directory"
+		print -n 'Enter Filter Criteria: '
+
+		loop {
+			let k = (input listen --types [key])
+
+			if $k.code == 'enter' or $k.code == 'return' {
+				break
+			}
+
+			$k | table --expand | print
+
+		}
+
+	}
+
+}
