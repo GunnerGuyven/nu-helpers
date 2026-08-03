@@ -2,6 +2,7 @@
 
 A collection of useful commands and code snippets for [Nushell](https://nushell.sh)
 
+- `0.0.4` 2026-08-03 : added more utilities ; corrected search matching
 - `0.0.3` 2025-10-27 : made task_status checks dynamic
 - `0.0.2` 2025-10-27 : added countdown display
   ; added file replace ; added testing area
