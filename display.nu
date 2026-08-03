@@ -1,7 +1,7 @@
 
 export def disable_cursor [] { print (ansi -e ?25l) --no-newline }
 
-export def color [ color:string ] {	$'(ansi $color)($in)(ansi reset)' }
+export def color [ color:string --no-reset] { $"(ansi $color)($in)(if (not $no_reset) {ansi reset})"}
 # export def c_blue [] { color blue }
 # export def c_lblue [] { color light_blue }
 # export def c_cyan [] { color cyan }
@@ -91,6 +91,18 @@ export def show_prompt [
 		[$message true]
 		[$decline_message false]
 	] | input list -d label | if $in.confirm { do $on_yes }
+}
+
+export def show_menu []: table<label:string, action:closure> -> any {
+	let entries = $in
+
+	loop {
+		$entries | input list -d label 
+		| if ($in | get action? | is-not-empty) {
+			let $a = $in.action ; do $a ; print ''
+		} else { break }
+	}
+
 }
 
 export def show_countdown [
