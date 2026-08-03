@@ -8,8 +8,14 @@ A collection of useful commands and code snippets for [Nushell](https://nushell.
   ; added file replace ; added testing area
 - `0.0.1` 2025-10-24 : initial release
 
+## Usage
+
+Clone this repository anywhere on your machine and symlink the project root in
+`~/.config/nushell/scripts/`. Then in your own script `use nu-helpers` will
+give you access to provided commands like `nu-helpers web get-site-cookies`.
+
 ## TODO
 
 - [ ] Document each command well
 - [ ] Give overall guidance for each script here
-- [ ] Provide inclusion suggestions here (how to bring this code into a project)
+- [x] Provide inclusion suggestions here (how to bring this code into a project)
