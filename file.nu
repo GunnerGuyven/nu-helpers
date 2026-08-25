@@ -52,3 +52,42 @@ export def super_rename [] {
 	}
 
 }
+
+# Watch a file and run a command when it changes.
+#
+# Create, Write, and Rename events on `file_path` trigger `--action`.
+# With no `--action`, the file is executed as a Nu script (`nu $file_path`).
+# Press Ctrl+C to stop.
+@search-terms watcher reload filesystem
+@example 'Re-run a script when it is saved' { run_on_change ./script.nu }
+@example 'Run tests whenever a file changes' { run_on_change ./app.nu --action { cargo test } }
+@example 'Separate runs with a marker line' { run_on_change ./script.nu --show-after '---' }
+export def run_on_change [
+  file_path: string # file to watch
+  --action: closure # command to run on each change (default: { nu $file_path })
+  --show-before: string # printed before each run
+  --show-after: string = '---' # printed after each run
+]: nothing -> nothing {
+
+  let target = $file_path | path parse | default --empty '.' parent
+
+  let action = $action | default {{ nu $file_path }}
+
+  # child job used to suppress terminal spam when cancelling watcher with CTRL+C
+  let parent = job id
+  let watcher = job spawn --description run_on_change {
+    for ev in (watch $target.parent --recursive false --glob $"($target.stem).($target.extension)" --quiet) {
+      if $ev.operation in [Create Write Rename] {
+        $ev | job send $parent
+      }
+    }
+  }
+  loop {
+    let ev = try { job recv } catch { null }
+    if $ev == null { break }
+    print $show_before
+    try { do $action }
+    print $show_after
+  }
+  try { job kill $watcher } catch { null }
+}
