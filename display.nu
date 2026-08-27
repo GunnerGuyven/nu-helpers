@@ -93,7 +93,7 @@ export def show_prompt [
 	] | input list -d label | if $in.confirm { do $on_yes }
 }
 
-export def show_menu []: table<label:string, action:closure> -> any {
+export def show_menu []: table<label:string, action:oneof<closure, nothing>> -> any {
 	let entries = $in
 
 	loop {
