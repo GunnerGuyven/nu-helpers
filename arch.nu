@@ -32,7 +32,7 @@ def aur-sync [] {
 	aur sync -c --upgrades
 }
 
-def main [] {
+export def main [] {
 	[
 		[label action];
 		["Show Aur Packages" { aur-list | print }]
