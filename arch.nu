@@ -1,4 +1,4 @@
-use display.nu [ color show_menu ]
+use display.nu [ color show_menu show_prompt ]
 
 def compare-version [a?:string b?:string] {
 	if ($a | is-empty) and ($b | is-empty ) { return 0 }
@@ -52,14 +52,48 @@ def aur-local-cleanup [] {
 	}
 }
 
+# Search the AUR. Keywords may be positional or a single piped string
+# (split into words so `'daddy time' | aur-search` matches `aur search daddy time`).
+def aur-search [...terms: string] {
+  let keywords = if ($terms | is-not-empty) {
+    $terms
+  } else {
+    $in | default '' | into string | str trim | split words
+  }
+  if ($keywords | is-empty) {
+    error make { msg: "aur-search: no search terms (pass args or pipe a string)" }
+  }
+  aur search ...$keywords --json | from json
+}
+
+def aur-search-prompt [] {
+  let pkg = input "Search: "
+  # 'daddy time'
+  | aur-search
+  # | select Name Version Description LastModified Maintainer
+  | update FirstSubmitted { into datetime -f '%s' | date humanize }
+  | update LastModified { into datetime -f '%s' | date humanize }
+  | move --first Name Version Description LastModified Maintainer
+  | input list --fuzzy
+
+  if ($pkg | is-not-empty ) {
+    print $pkg
+    show_prompt 'Build this package and store into local repo?' {
+      aur sync -c $pkg.Name
+    }
+  }
+
+}
+
 def "main test" [] {
-	aur-local-cleanup
+	aur-search-prompt
 }
 
 export def main [] {
 	[
 		[label action];
 		["Show Aur Packages" { aur-list | aur-list-present | print }]
+		["Search Aur Packages" { aur-search-prompt }]
 		["Sync From Remote" { aur-sync | print }]
 		["Clean Local Packages" { aur-local-cleanup }]
 		[("Exit" | color red) null]
