@@ -71,6 +71,16 @@ def aur-search [...terms: string] {
   $result.stdout | from json
 }
 
+def aur-install [] : oneof<list<string>,table<Name:string>> -> any {
+	let pkgs = if ($in | describe | str starts-with list) { wrap Name } else { $in }
+
+	let entries = aur repo --json | from json
+	| join $pkgs Name
+	| insert pkgfile {|r| $r.DBPath | path parse | get parent | path join $r.FileName }
+
+	sudo pacman -U ...($entries | get pkgfile)
+}
+
 def aur-search-prompt [] {
   let results = input "Search: " | aur-search
   if ($results | is-empty) {
@@ -95,13 +105,14 @@ def aur-search-prompt [] {
 }
 
 def "main test" [] {
-	aur-search-prompt
+	# aur-list | input list --multi | rename Name | aur-install
 }
 
 export def main [] {
 	[
 		[label action];
 		["Show Local Packages" { aur-list | aur-list-present | print }]
+		["Install Local Packages" { aur-list | input list --multi | rename Name | aur-install }]
 		["Search AUR for Packages to Add" { aur-search-prompt }]
 		["Sync Remote to Local" { aur-sync | print }]
 		["Pick Local Packages to Remove" { aur-local-cleanup }]
