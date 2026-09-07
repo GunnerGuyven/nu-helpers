@@ -2,6 +2,8 @@
 
 A collection of useful commands and code snippets for [Nushell](https://nushell.sh)
 
+- `0.0.7` 2026-09-07 : added many options to install and maintain AUR packages
+  ; added beginnings of a cached file handler
 - `0.0.6` 2026-08-30 : added arch aur helpers ; updated file watcher to be more flexible
 - `0.0.5` 2026-08-25 : added file watcher
 - `0.0.4` 2026-08-03 : added more utilities ; corrected search matching
