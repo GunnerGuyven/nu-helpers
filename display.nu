@@ -93,6 +93,19 @@ export def show_prompt [
 	] | input list -d label | if $in.confirm { do $on_yes }
 }
 
+# Interactive menu driven by a table of labels and actions.
+#
+# Pipe in rows with `label` (shown in the list) and `action` (closure to run,
+# or `null` / empty to exit). Selecting an entry with an action runs it, then
+# redisplays the menu; selecting an entry without an action breaks the loop.
+@search-terms menu interactive input list
+@example 'Simple yes/work/exit menu' {
+  [
+    [label action];
+    ["Do work" { print "working" }]
+    ["Exit" null]
+  ] | show_menu
+}
 export def show_menu []: table<label:string, action:oneof<closure, nothing>> -> any {
 	let entries = $in
 
