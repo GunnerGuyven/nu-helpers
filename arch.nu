@@ -11,7 +11,8 @@ def aur-list [--show-debug-packages] {
 	let installed = pacman -Q | detect columns --no-headers | rename package installed
 
 	let repo = aur repo --list --json | from json
-	| select Name Version | rename package local | join --left $installed package | move installed --after package
+	| select Name Version PackageBase
+	| rename package local | join --left $installed package | move installed --after package
 	| if $show_debug_packages { $in } else { where package !~ '-debug' }
 
 	let remote = $repo.package | str join (char nl) | aur query -t info -
@@ -19,8 +20,11 @@ def aur-list [--show-debug-packages] {
 	| update OutOfDate {if ( $in | is-not-empty ) { into datetime -f '%s' } }
 
 	$repo | join --left $remote package
+	| insert srcver null | move srcver --after remote
 	| insert ltoi {|r| compare-version $r.local $r.installed }
 	| insert ltor {|r| compare-version $r.local $r.remote }
+	| insert ltos { 0 }
+	| move PackageBase --last
 }
 
 def aur-list-present [] {
@@ -28,8 +32,9 @@ def aur-list-present [] {
 	| update remote    {|r| if ($r.ltor < 0) { color blue } else { color grey } }
 	| update local     {|r| if ($r.ltoi > 0) { color blue } else { color grey } }
 	| update package   {|r| if ($r.ltoi > 0) { color blue } else { color grey } }
+	| update srcver    {|r| if ($r.ltos > 0) { color blue } else { color grey } }
 	| update OutOfDate {if ($in | is-not-empty) { date humanize | color red } }
-	| drop column 2
+	| drop column 4
 }
 
 def aur-sync [] {
@@ -50,6 +55,14 @@ def aur-local-cleanup [] {
 	  repo-remove $db $pkg
 	  rm ($db | path parse | get parent | path join $file)
 	}
+}
+
+def aur-local-srcver [] {
+	let selection = aur-list | input list --multi
+
+	$selection 
+	| update srcver {|r| $env.AURDEST | path join $r.PackageBase | aur srcver $in | parse "{pkg}\t{ver}" | get ver | first }
+	| update ltos {|r| compare-version $r.local $r.srcver }
 }
 
 # Search the AUR. Keywords may be positional or a single piped string
@@ -105,7 +118,8 @@ def aur-search-prompt [] {
 }
 
 def "main test" [] {
-	# aur-list | input list --multi | rename Name | aur-install
+	# aur-list | aur-list-present
+	aur-local-srcver | aur-list-present
 }
 
 export def main [] {
@@ -115,6 +129,7 @@ export def main [] {
 		["Install Local Packages" { aur-list | input list --multi | rename Name | aur-install }]
 		["Search AUR for Packages to Add" { aur-search-prompt }]
 		["Sync Remote to Local" { aur-sync | print }]
+		["Pick Local Packages Check SrcVer (slow, careful)" { aur-local-srcver | aur-list-present |  print }]
 		["Pick Local Packages to Remove" { aur-local-cleanup }]
 		[("Exit" | color red) null]
 	] | show_menu
