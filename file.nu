@@ -94,3 +94,36 @@ export def run_on_change [
   }
   try { job kill $watcher } catch { null }
 }
+
+export def cache-or [
+  key:string
+  produce?:closure
+  --root:path
+  --ttl:duration
+] {
+  let action = $in | default $produce | default {}
+  let path: path = $root | default '.' | path join $key
+
+  if (
+    ($path | path exists ) and
+   ( ( $ttl | is-empty ) or ( ls $path | first | get modified | (date now) - $in ) < $ttl )
+  ) {
+    open $path
+  } else {
+    do $action | tee { save -f $path }
+  }
+}
+
+def main [] {}
+def "main cache" [] {
+
+  const key = '.time'
+
+  [
+    ( { random uuid } | cache-or $key --ttl 5sec )
+    ( { random uuid } | cache-or $key --ttl 1sec )
+    ( { random uuid } | cache-or $key )
+    ( { random uuid } | cache-or $key )
+    ( { random uuid } | cache-or $key )
+  ] | print
+}

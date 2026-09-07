@@ -54,6 +54,7 @@ def aur-local-cleanup [] {
 
 # Search the AUR. Keywords may be positional or a single piped string
 # (split into words so `'daddy time' | aur-search` matches `aur search daddy time`).
+# No matches → empty table (aur exits 1 with empty stdout).
 def aur-search [...terms: string] {
   let keywords = if ($terms | is-not-empty) {
     $terms
@@ -63,26 +64,34 @@ def aur-search [...terms: string] {
   if ($keywords | is-empty) {
     error make { msg: "aur-search: no search terms (pass args or pipe a string)" }
   }
-  aur search ...$keywords --json | from json
+  let result = aur search ...$keywords --json | complete
+  if $result.exit_code != 0 or ($result.stdout | str trim | is-empty) {
+    return []
+  }
+  $result.stdout | from json
 }
 
 def aur-search-prompt [] {
-  let pkg = input "Search: "
-  # 'daddy time'
-  | aur-search
-  # | select Name Version Description LastModified Maintainer
+  let results = input "Search: " | aur-search
+  if ($results | is-empty) {
+    print "No packages found."
+    return
+  }
+
+  let pkg = $results
   | update FirstSubmitted { into datetime -f '%s' | date humanize }
   | update LastModified { into datetime -f '%s' | date humanize }
   | move --first Name Version Description LastModified Maintainer
   | input list --fuzzy
 
-  if ($pkg | is-not-empty ) {
+  if ($pkg | is-not-empty) {
     print $pkg
-    show_prompt 'Build this package and store into local repo?' {
-      aur sync -c $pkg.Name
-    }
+    [ [label action];
+      ['Build this package and store into local repo' {aur sync -c $pkg.Name}]
+      ['Open this package on the AUR website' { start $"https://aur.archlinux.org/packages/($pkg.Name)" }]
+      [(' Back' | color red) null]
+    ] | show_menu
   }
-
 }
 
 def "main test" [] {
@@ -92,10 +101,10 @@ def "main test" [] {
 export def main [] {
 	[
 		[label action];
-		["Show Aur Packages" { aur-list | aur-list-present | print }]
-		["Search Aur Packages" { aur-search-prompt }]
-		["Sync From Remote" { aur-sync | print }]
-		["Clean Local Packages" { aur-local-cleanup }]
+		["Show Local Packages" { aur-list | aur-list-present | print }]
+		["Search AUR for Packages to Add" { aur-search-prompt }]
+		["Sync Remote to Local" { aur-sync | print }]
+		["Pick Local Packages to Remove" { aur-local-cleanup }]
 		[("Exit" | color red) null]
 	] | show_menu
 }
