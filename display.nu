@@ -100,11 +100,11 @@ export def show_prompt [
 # redisplays the menu; selecting an entry without an action breaks the loop.
 @search-terms menu interactive input list
 @example 'Simple yes/work/exit menu' {
-  [
-    [label action];
-    ["Do work" { print "working" }]
-    ["Exit" null]
-  ] | show_menu
+	[
+		[label action];
+		["Do work" { print "working" }]
+		["Exit" null]
+	] | show_menu
 }
 export def show_menu []: table<label:string, action:oneof<closure, nothing>> -> any {
 	let entries = $in
