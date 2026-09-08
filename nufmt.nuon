@@ -1,0 +1,5 @@
+{
+	indent : 2
+	indent_char: "tab"
+	line_length : 120
+}

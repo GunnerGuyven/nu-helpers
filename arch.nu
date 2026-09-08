@@ -49,11 +49,11 @@ def aur-local-cleanup [] {
 
 	$repo_entries
 	| each {
-	  let pkg = $in.Name
-	  let file = $in.FileName
-	  let db = $in.DBPath
-	  repo-remove $db $pkg
-	  rm ($db | path parse | get parent | path join $file)
+		let pkg = $in.Name
+		let file = $in.FileName
+		let db = $in.DBPath
+		repo-remove $db $pkg
+		rm ($db | path parse | get parent | path join $file)
 	}
 }
 
@@ -69,19 +69,19 @@ def aur-local-srcver [] {
 # (split into words so `'daddy time' | aur-search` matches `aur search daddy time`).
 # No matches → empty table (aur exits 1 with empty stdout).
 def aur-search [...terms: string] {
-  let keywords = if ($terms | is-not-empty) {
-    $terms
-  } else {
-    $in | default '' | into string | str trim | split words
-  }
-  if ($keywords | is-empty) {
-    error make { msg: "aur-search: no search terms (pass args or pipe a string)" }
-  }
-  let result = aur search ...$keywords --json | complete
-  if $result.exit_code != 0 or ($result.stdout | str trim | is-empty) {
-    return []
-  }
-  $result.stdout | from json
+	let keywords = if ($terms | is-not-empty) {
+		$terms
+	} else {
+		$in | default '' | into string | str trim | split words
+	}
+	if ($keywords | is-empty) {
+		error make { msg: "aur-search: no search terms (pass args or pipe a string)" }
+	}
+	let result = aur search ...$keywords --json | complete
+	if $result.exit_code != 0 or ($result.stdout | str trim | is-empty) {
+		return []
+	}
+	$result.stdout | from json
 }
 
 def aur-install [] : oneof<list<string>,table<Name:string>> -> any {
@@ -95,26 +95,26 @@ def aur-install [] : oneof<list<string>,table<Name:string>> -> any {
 }
 
 def aur-search-prompt [] {
-  let results = input "Search: " | aur-search
-  if ($results | is-empty) {
-    print "No packages found."
-    return
-  }
+	let results = input "Search: " | aur-search
+	if ($results | is-empty) {
+		print "No packages found."
+		return
+	}
 
-  let pkg = $results
-  | update FirstSubmitted { into datetime -f '%s' | date humanize }
-  | update LastModified { into datetime -f '%s' | date humanize }
-  | move --first Name Version Description LastModified Maintainer
-  | input list --fuzzy
+	let pkg = $results
+	| update FirstSubmitted { into datetime -f '%s' | date humanize }
+	| update LastModified { into datetime -f '%s' | date humanize }
+	| move --first Name Version Description LastModified Maintainer
+	| input list --fuzzy
 
-  if ($pkg | is-not-empty) {
-    print $pkg
-    [ [label action];
-      ['Build this package and store into local repo' {aur sync -c $pkg.Name}]
-      ['Open this package on the AUR website' { start $"https://aur.archlinux.org/packages/($pkg.Name)" }]
-      [(' Back' | color red) null]
-    ] | show_menu
-  }
+	if ($pkg | is-not-empty) {
+		print $pkg
+		[ [label action];
+			['Build this package and store into local repo' {aur sync -c $pkg.Name}]
+			['Open this package on the AUR website' { start $"https://aur.archlinux.org/packages/($pkg.Name)" }]
+			[(' Back' | color red) null]
+		] | show_menu
+	}
 }
 
 def "main test" [] {
