@@ -125,7 +125,7 @@ def "main test" [] {
 export def main [] {
 	[
 		[label action];
-		["Show Local Packages" { aur-list | aur-list-present | print }]
+		["Show Local Packages" { aur-list | aur-list-present | reject srcver | print }]
 		["Install Local Packages" { aur-list | input list --multi | rename Name | aur-install }]
 		["Search AUR for Packages to Add" { aur-search-prompt }]
 		["Sync Remote to Local" { aur-sync | print }]
