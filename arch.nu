@@ -42,13 +42,13 @@ def aur-sync-all [] {
 }
 
 def aur-sync-only [] {
-  aur-list | where ltor < 0 | input list --multi | default []
-  | get package
-  | aur sync -c ...$in
+	aur-list | where ltor < 0 | input list --multi | default []
+	| get package
+	| aur sync -c ...$in
 }
 
 def aur-local-cleanup [] {
-	let selection = aur-list | input list --multi 
+	let selection = aur-list | input list --multi
 
 	let repo_entries = aur repo --json | from json
 	| join $selection Name package
@@ -95,7 +95,9 @@ def aur-install [] : oneof<list<string>,table<Name:string>> -> any {
 	| join $pkgs Name
 	| insert pkgfile {|r| $r.DBPath | path parse | get parent | path join $r.FileName }
 
-	sudo pacman -U ...($entries | get pkgfile)
+	if ($entries | is-not-empty ) {
+		sudo pacman -U ...($entries | get pkgfile)
+	}
 }
 
 def aur-search-prompt [] {
@@ -122,14 +124,14 @@ def aur-search-prompt [] {
 }
 
 def "main test" [] {
-  # aur-sync-only
+	# aur-sync-only
 }
 
 export def main [] {
 	[
 		[label action];
 		["Show Local Packages" { aur-list | aur-list-present | reject srcver | print }]
-		["Install Local Packages" { aur-list | input list --multi | rename Name | aur-install }]
+		["Install Local Packages" { aur-list | input list --multi | default [] | rename Name | aur-install }]
 		["Search AUR for Packages to Add" { aur-search-prompt }]
 		["Sync Remote to Local (all)" { aur-sync-all | print }]
 		["Sync Remote to Local (pick)" { aur-sync-only | print }]
