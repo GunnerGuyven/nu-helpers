@@ -37,8 +37,14 @@ def aur-list-present [] {
 	| drop column 4
 }
 
-def aur-sync [] {
+def aur-sync-all [] {
 	aur sync -c --upgrades
+}
+
+def aur-sync-only [] {
+  aur-list | where ltor < 0 | input list --multi | default []
+  | get package
+  | aur sync -c ...$in
 }
 
 def aur-local-cleanup [] {
@@ -58,9 +64,7 @@ def aur-local-cleanup [] {
 }
 
 def aur-local-srcver [] {
-	let selection = aur-list | input list --multi
-
-	$selection 
+	aur-list | input list --multi | default []
 	| update srcver {|r| $env.AURDEST | path join $r.PackageBase | aur srcver $in | parse "{pkg}\t{ver}" | get ver | first }
 	| update ltos {|r| compare-version $r.local $r.srcver }
 }
@@ -118,8 +122,7 @@ def aur-search-prompt [] {
 }
 
 def "main test" [] {
-	# aur-list | aur-list-present
-	aur-local-srcver | aur-list-present
+  # aur-sync-only
 }
 
 export def main [] {
@@ -128,7 +131,8 @@ export def main [] {
 		["Show Local Packages" { aur-list | aur-list-present | reject srcver | print }]
 		["Install Local Packages" { aur-list | input list --multi | rename Name | aur-install }]
 		["Search AUR for Packages to Add" { aur-search-prompt }]
-		["Sync Remote to Local" { aur-sync | print }]
+		["Sync Remote to Local (all)" { aur-sync-all | print }]
+		["Sync Remote to Local (pick)" { aur-sync-only | print }]
 		["Pick Local Packages Check SrcVer (slow, careful)" { aur-local-srcver | aur-list-present |  print }]
 		["Pick Local Packages to Remove" { aur-local-cleanup }]
 		[("Exit" | color red) null]
