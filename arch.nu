@@ -32,7 +32,7 @@ def aur-list-present [] {
 	| update remote    {|r| if ($r.ltor < 0) { color blue } else { color grey } }
 	| update local     {|r| if ($r.ltoi > 0) { color blue } else { color grey } }
 	| update package   {|r| if ($r.ltoi > 0 or $r.ltor < 0 or $r.ltos > 0) { color blue } else { color grey } }
-	| update srcver    {|r| if ($r.ltos > 0) { color blue } else { color grey } }
+	| update srcver    {|r| if ($r.ltos < 0) { color blue } else { color grey } }
 	| update OutOfDate {if ($in | is-not-empty) { date humanize | color red } }
 	| drop column 4
 }
