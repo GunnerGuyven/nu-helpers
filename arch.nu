@@ -1,4 +1,4 @@
-use display.nu [ color show_menu show_prompt ]
+use display.nu [ color show_menu show_prompt show_task_array_status ]
 
 def compare-version [a?:string b?:string] {
 	if ($a | is-empty) and ($b | is-empty ) { return 0 }
@@ -65,13 +65,24 @@ def aur-local-cleanup [] {
 
 def aur-local-srcver [] {
 	let picked = aur-list | input list --multi | default []
-	let total = $picked | length
-	$picked | enumerate
-		| update item.srcver {|e|
-			print -e $"[($e.index + 1)/($total)] ($e.item.package)"
-			$env.AURDEST | path join $e.item.PackageBase | aur srcver $in | parse "{pkg}\t{ver}" | get ver | first }
-	| update item.ltos {|e| compare-version $e.item.local $e.item.srcver }
-	| get item
+	mut tasks = $picked | each {|r| {status: PENDING, name: $r.package}}
+	mut rows = []
+
+	for e in ($picked | enumerate) {
+		$tasks = $tasks | update $e.index {|row| $row | update status IN_PROGRESS}
+		$tasks | show_task_array_status --label-summary "Checking SrcVer"
+
+		let srcver = $env.AURDEST | path join $e.item.PackageBase | aur srcver $in | parse "{pkg}\t{ver}" | get ver | first
+		let row = $e.item | update srcver $srcver | update ltos {|r| compare-version $r.local $srcver }
+
+    $tasks | print
+
+		$tasks = $tasks | update $e.index { update status SUCCESS }
+		$tasks | show_task_array_status --label-summary "Checking SrcVer"
+		$rows = $rows | append $row
+	}
+
+	$rows
 }
 
 # Search the AUR. Keywords may be positional or a single piped string
