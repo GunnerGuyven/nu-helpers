@@ -31,7 +31,7 @@ def aur-list-present [] {
 		update installed {|r| if ($r.ltoi < 0) { color blue } else { color grey } }
 	| update remote    {|r| if ($r.ltor < 0) { color blue } else { color grey } }
 	| update local     {|r| if ($r.ltoi > 0) { color blue } else { color grey } }
-	| update package   {|r| if ($r.ltoi > 0 or $r.ltor < 0 or $r.ltos > 0) { color blue } else { color grey } }
+	| update package   {|r| if ($r.ltoi > 0 or $r.ltor < 0 or $r.ltos < 0) { color blue } else { color grey } }
 	| update srcver    {|r| if ($r.ltos < 0) { color blue } else { color grey } }
 	| update OutOfDate {if ($in | is-not-empty) { date humanize | color red } }
 	| drop column 4
@@ -48,7 +48,7 @@ def aur-sync-only [] {
 }
 
 def aur-local-cleanup [] {
-	let selection = aur-list | input list --multi
+	let selection = aur-list | input list --multi | default []
 
 	let repo_entries = aur repo --json | from json
 	| join $selection Name package
@@ -64,9 +64,14 @@ def aur-local-cleanup [] {
 }
 
 def aur-local-srcver [] {
-	aur-list | input list --multi | default []
-	| update srcver {|r| $env.AURDEST | path join $r.PackageBase | aur srcver $in | parse "{pkg}\t{ver}" | get ver | first }
-	| update ltos {|r| compare-version $r.local $r.srcver }
+	let picked = aur-list | input list --multi | default []
+	let total = $picked | length
+	$picked | enumerate
+		| update item.srcver {|e|
+			print -e $"[($e.index + 1)/($total)] ($e.item.package)"
+			$env.AURDEST | path join $e.item.PackageBase | aur srcver $in | parse "{pkg}\t{ver}" | get ver | first }
+	| update item.ltos {|e| compare-version $e.item.local $e.item.srcver }
+	| get item
 }
 
 # Search the AUR. Keywords may be positional or a single piped string
@@ -124,7 +129,7 @@ def aur-search-prompt [] {
 }
 
 def "main test" [] {
-	# aur-sync-only
+	# aur-local-srcver | aur-list-present | collect | print
 }
 
 export def main [] {
@@ -135,7 +140,7 @@ export def main [] {
 		["Search AUR for Packages to Add" { aur-search-prompt }]
 		["Sync Remote to Local (all)" { aur-sync-all | print }]
 		["Sync Remote to Local (pick)" { aur-sync-only | print }]
-		["Pick Local Packages Check SrcVer (slow, careful)" { aur-local-srcver | aur-list-present |  print }]
+		["Pick Local Packages Check SrcVer (slow, careful)" { aur-local-srcver | aur-list-present | collect | print }]
 		["Pick Local Packages to Remove" { aur-local-cleanup }]
 		[("Exit" | color red) null]
 	] | show_menu
