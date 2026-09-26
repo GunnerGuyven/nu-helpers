@@ -284,12 +284,12 @@ export def show_task_array_status [
 	--status-error:string = ERROR
 	--status-cancelled:string = CANCELLED
 	--status-active:string = IN_PROGRESS
-] {
+]: table<status:string,name:string> -> bool {
 	let tasks = $in
 	let tasks_count = $tasks | length
 	let w = $tasks_count | $'($in)' | str length
 	let grid_width = [$max_line_width (term size | get columns)] | math min
-	let complete_count = $tasks | where {|t| $t.status in [SUCCESS FAILURE CANCELLED]} | length
+	let complete_count = $tasks | where {|t| $t.status in [SUCCESS ERROR CANCELLED]} | length
 
 	let grid = $tasks | each {|t|
 		if ($t.status == $status_success) { $'(ansi $color_success)  '
