@@ -75,8 +75,6 @@ def aur-local-srcver [] {
 		let srcver = $env.AURDEST | path join $e.item.PackageBase | aur srcver $in | parse "{pkg}\t{ver}" | get ver | first
 		let row = $e.item | update srcver $srcver | update ltos {|r| compare-version $r.local $srcver }
 
-    $tasks | print
-
 		$tasks = $tasks | update $e.index { update status SUCCESS }
 		$tasks | show_task_array_status --label-summary "Checking SrcVer"
 		$rows = $rows | append $row
@@ -146,7 +144,7 @@ def "main test" [] {
 export def main [] {
 	[
 		[label action];
-		["Show Local Packages" { aur-list | aur-list-present | reject srcver | print }]
+		["Show Local Packages" { main show }]
 		["Install Local Packages" { aur-list | input list --multi | default [] | rename Name | aur-install }]
 		["Search AUR for Packages to Add" { aur-search-prompt }]
 		["Sync Remote to Local (all)" { aur-sync-all | print }]
@@ -156,4 +154,5 @@ export def main [] {
 		[("Exit" | color red) null]
 	] | show_menu
 }
+export def "main show" [] { aur-list | aur-list-present | reject srcver | print }
 
