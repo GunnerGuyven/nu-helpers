@@ -43,8 +43,47 @@ const commands.
 
 ## arch.nu
 
-- [ ] Local state
+- [ ] Local state. One `nu-helpers` directory under each XDG root. Resolve
+      `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, and `XDG_CACHE_HOME`, or else
+      `~/.config`, `~/.local/state`, and `~/.cache`, then join `nu-helpers`.
+      Nushell keeps its own files in `~/.config/nushell`
+  - Config you edit: `~/.config/nu-helpers/arch.nuon` (repo-path fallback,
+    ignored packages, menu defaults). `AURDEST` overrides the file for one
+    run. Load with `open | default $defaults`. Save nuon, so the file is
+    data. Use JSON when another program has to read it
+  - State a later run cannot rebuild from current inputs:
+    `~/.local/state/nu-helpers/` (last selection, sync and removal log, past
+    srcver). A single snapshot is one file: write a temp file in that
+    directory, then rename it over the real file. One menu at a time;
+    overlapping runs can drop a snapshot. Queryable history is `arch.db`
+    there, through `open` and `query db`. `stor` ends with the process
+  - Cache the current inputs can produce again: `~/.cache/nu-helpers/`
+    (latest srcver, keyed by PKGBUILD mtime or git revision). Removing it
+    only makes the next check slow
+  - `~/.local/share` is data you would copy to another machine. The local
+    repo aurutils already manages is that kind of data
 - [ ] Remote refresh only so often
 - [ ] Show packages (first 20) by default
 - [ ] Package entry links to the project changelog (browser or tui)
 - [ ] Package entry links to the AUR package info page (browser or tui)
+- [ ] Setup tutorial and config check. Steps and expected values are those in
+      `~/work/learning/aurtools/SETUP.md`
+  - [ ] Tutorial command prints those setup instructions
+  - [ ] Check command prints a checklist. One row per local setting, marked
+        pass or fail:
+    - [ ] `aurutils`, `devtools`, and `vifm` are installed
+    - [ ] `/var/cache/custompkgs` exists and is owned by the current user
+    - [ ] `custom.db` is a symlink to `custom.db.tar.gz`
+    - [ ] `/etc/pacman.conf`: `CacheDir` includes `/var/cache/custompkgs`,
+          `CleanMethod = KeepCurrent`, and the last repository is `[custom]`
+          with `SigLevel = Optional TrustAll` and
+          `Server = file:///var/cache/custompkgs`
+    - [ ] `/etc/aurutils/pacman-x86_64.conf` is the devtools multilib pacman
+          conf plus that same `[custom]` block
+    - [ ] `/etc/aurutils/makepkg-x86_64.conf` is absent
+    - [ ] `aur chroot` reports `/var/lib/aurbuild/x86_64`,
+          `/etc/aurutils/pacman-x86_64.conf`, and
+          `/usr/share/devtools/makepkg.conf.d/x86_64.conf`
+    - [ ] `AURDEST` is `~/aurpkgs` and that directory exists
+    - [ ] `AUR_PAGER` is unset
+    - [ ] `~/.config/aurutils/view/orderfile` contains `PKGBUILD`
