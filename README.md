@@ -2,6 +2,7 @@
 
 A collection of useful commands and code snippets for [Nushell](https://nushell.sh)
 
+- `0.1.1` 2026-10-03 : added installer for arch helpers
 - `0.1.0` 2026-10-02 : added menu creation helper
 - `0.0.7` 2026-09-07 : added many options to install and maintain AUR packages
   ; added beginnings of a cached file handler
