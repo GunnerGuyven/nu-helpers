@@ -144,17 +144,14 @@ def aur-search-prompt [] {
 	}
 }
 
-# def "main test" [] {
-#   create_menu_entries_from_subcommands $self_path
-#   | append {label: ( "󰈆 Exit" | color red ) action: null}
-#   | show_menu
-#
-# 	# aur-local-srcver | aur-list-present | collect | print
-# }
+def "main test" [] {
+  'hi there'
+	# aur-local-srcver | aur-list-present | collect | print
+}
 
 const self_path = path self
-def main [] {
-  create_menu_entries_from_subcommands $self_path
+def main [--include-non-menuentry-subcommands] {
+  create_menu_entries_from_subcommands $self_path --include-non-menuentry-subcommands=$include_non_menuentry_subcommands
   | append {label: ( "󰈆 Exit" | color red ) action: null}
   | show_menu
 }
