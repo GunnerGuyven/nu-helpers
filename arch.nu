@@ -1,4 +1,11 @@
-use display.nu [ color show_menu show_prompt show_task_array_status ]
+use display.nu [
+  color
+  create_menu_entries_from_subcommands
+  show_menu
+  show_prompt
+  show_task_array_status
+  "attr menuentry"
+]
 
 def compare-version [a?:string b?:string] {
 	if ($a | is-empty) and ($b | is-empty ) { return 0 }
@@ -137,22 +144,32 @@ def aur-search-prompt [] {
 	}
 }
 
-def "main test" [] {
-	# aur-local-srcver | aur-list-present | collect | print
+# def "main test" [] {
+#   create_menu_entries_from_subcommands $self_path
+#   | append {label: ( "󰈆 Exit" | color red ) action: null}
+#   | show_menu
+#
+# 	# aur-local-srcver | aur-list-present | collect | print
+# }
+
+const self_path = path self
+def main [] {
+  create_menu_entries_from_subcommands $self_path
+  | append {label: ( "󰈆 Exit" | color red ) action: null}
+  | show_menu
 }
 
-export def main [] {
-	[
-		[label action];
-		["Show Local Packages" { main show }]
-		["Install Local Packages" { aur-list | input list --multi | default [] | rename Name | aur-install }]
-		["Search AUR for Packages to Add" { aur-search-prompt }]
-		["Sync Remote to Local (all)" { aur-sync-all | print }]
-		["Sync Remote to Local (pick)" { aur-sync-only | print }]
-		["Pick Local Packages Check SrcVer (slow, careful)" { aur-local-srcver | aur-list-present | collect | print }]
-		["Pick Local Packages to Remove" { aur-local-cleanup }]
-		[("Exit" | color red) null]
-	] | show_menu
-}
-export def "main show" [] { aur-list | aur-list-present | reject srcver | print }
-
+@menuentry { label: 'Show Local Packages' display: [[0 blue] [5 red] [10 yellow]] }
+def "main show" [] { aur-list | aur-list-present | reject srcver | print }
+@menuentry "Install Local Packages"
+def "main install" [] { aur-list | input list --multi | default [] | rename Name | aur-install }
+@menuentry "Search AUR for Packages to Add"
+def "main search" [] { aur-search-prompt }
+@menuentry "Sync Remote to Local (all)"
+def "main sync all" [] { aur-sync-all | print }
+@menuentry "Sync Remote to Local (pick)"
+def "main sync pick" [] { aur-sync-only | print }
+@menuentry "Pick Local Packages Check SrcVer (slow, careful)"
+def "main srcver" [] { aur-local-srcver | aur-list-present | collect | print }
+@menuentry "Pick Local Packages to Remove"
+def "main remove" [] { aur-local-cleanup }

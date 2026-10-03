@@ -6,32 +6,32 @@
 name, the doc-comment `description`, and `attributes`. The menu label is the
 `@menuentry` value, or `description` when the tag is absent.
 
-`display.nu` has a stub: `create_menu_entries_from_subcommands`, and an
-unexported `alias "attr menuentry" = echo` next to sample `main sub1` / `main
-sub2`.
+`display.nu` exports `alias "attr menuentry" = echo`.
+`create_menu_entries_from_subcommands` builds the rows below; the parent-command
+filter and the description fallback are still open.
 
-- [ ] Export the tag from `display.nu`: `export alias "attr menuentry" = echo`
-- [ ] Import `"attr menuentry"` in each file that writes `@menuentry` (`use
+- [x] Export the tag from `display.nu`: `export alias "attr menuentry" = echo`
+- [x] Import `"attr menuentry"` in each file that writes `@menuentry` (`use
 display.nu [ ... "attr menuentry" ]`). A direct `use display.nu *` also brings
       the alias in. `use` of a parent that only re-exports it does not, unless the
       alias is imported by name
 - [ ] Finish `create_menu_entries_from_subcommands`
   - [ ] Keep custom subcommands of `--parent-command` (default `main`) defined
         in this file (`which` path equals `const` `path self`), one row per `decl_id`
-  - [ ] Sort by `decl_id` so source order is menu order
+  - [x] Sort by `decl_id` so source order is menu order
   - [ ] Label from the `menuentry` attribute, otherwise the doc-comment
         `description`
-  - [ ] Action re-runs `nu $file <subcommand...>`. A custom command cannot be
+  - [x] Action re-runs `nu $file <subcommand...>`. A custom command cannot be
         called by name in-process (`%` dispatches builtins only). Build the closure
         inside `each` so each row keeps its own args
-- [ ] Append a hand-written Exit row with a null action. `show_menu` leaves the
+- [x] Append a hand-written Exit row with a null action. `show_menu` leaves the
       loop only when the action is empty
-- [ ] Turn each `arch.nu` menu row into a `main` subcommand. Internal commands
+- [x] Turn each `arch.nu` menu row into a `main` subcommand. Internal commands
       such as `aur-sync-all` are not `nu arch.nu ...` entry points
-- [ ] Use `@menuentry` when the menu label differs from the help line.
+- [x] Use `@menuentry` when the menu label differs from the help line.
       Otherwise the first doc-comment paragraph is the label. The comment block sits
       above the `@` lines, and the `@` lines sit directly above `def`
-- [ ] Point `main` at `create_menu_entries_from_subcommands | show_menu` and
+- [x] Point `main` at `create_menu_entries_from_subcommands | show_menu` and
       remove the hand-written table
 - [ ] Check a generated row runs that subcommand, Exit returns to the shell,
       and `use arch.nu` still shows the stored `menuentry` attribute

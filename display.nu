@@ -110,19 +110,19 @@ export def show_menu []: table<label:string, action:oneof<closure, nothing>> -> 
 	let entries = $in
 
 	loop {
-		$entries | input list -d label 
+		$entries | input list -d label
 		| if ($in | get action? | is-not-empty) {
 			let $a = $in.action ; do $a ; print ''
 		} else { break }
 	}
-
 }
+
 
 export def show_countdown [
 	how_long:duration
 	--label-prefix:string = ''
-	--label-counter:string = ''
 	--label-completed:string = 'Done'
+	--label-counter:string = ''
 	--starting-column:int = 0
 	--no-newline
 ] {
@@ -312,4 +312,61 @@ export def show_task_array_status [
 		print -n $'(ansi -e $back_rows)'
 		false
 	} else { true }
+}
+
+def get_label [] : oneof<string,record<label:string,display:oneof<string,list>>> -> string {
+	match $in {
+		{label:$label, display:$display} => {
+			match $display {
+				[..$spans] => {
+					let events = (
+						$spans | each {|s|
+							match $s {
+								{at:$at, style:$style} | [$at, $style] => {at: $at, style: $style}
+								_ => (error make 'all display spans must specify "at" and "style" components')
+							}
+						}
+						| sort-by at
+					)
+					let len = ($label | str length)
+					let ends = ($events | each {|e| $e.at} | skip 1 | append $len)
+					let first = if ($events | is-empty) { $len } else { $events.0.at }
+					let prefix = ($label | str substring 0..<$first)
+					let body = (
+						$events | enumerate | each {|e|
+							let text = ($label | str substring ($e.item.at)..<($ends | get $e.index))
+							if ($text | is-empty) { "" } else { $text | color $e.item.style }
+						} | str join ""
+					)
+					$prefix + $body
+				}
+				$color => ($label | color $color)
+			}
+		}
+		# null => ( $entry | get name | split row --number 2 ' ' | get 1 )
+		$s if ( $s | describe ) == string => $s
+		# _ => (error make $'Badly formed menuentry: ($entry.name)')
+	}
+}
+
+
+export alias "attr menuentry" = echo
+export def create_menu_entries_from_subcommands [ module_path:path ] {
+	scope commands
+	| where type == custom and is_sub == true
+	| where ($it.name | str starts-with $"($module_path | path basename) ")
+	| sort-by decl_id
+	| each {|m|
+		let cmd = $m.name | split row ' ' | skip 1
+		{
+			label: (
+				match ($m.attributes | where name == 'menuentry' | get 0?.value) {
+					null => ($cmd | str join ' ')
+					$entry => ($entry | get_label)
+				}
+			)
+			action: { nu $module_path ...$cmd }
+			decl_id: $m.decl_id
+		}
+	}
 }
