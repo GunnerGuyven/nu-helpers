@@ -314,8 +314,9 @@ export def show_task_array_status [
 	} else { true }
 }
 
-def get_label [] : oneof<string,record<label:string,display:oneof<string,list>>> -> string {
-	match $in {
+def get_label []: any -> string {
+	let value = $in
+	match $value {
 		{label:$label, display:$display} => {
 			match $display {
 				[..$spans] => {
@@ -343,26 +344,42 @@ def get_label [] : oneof<string,record<label:string,display:oneof<string,list>>>
 				$color => ($label | color $color)
 			}
 		}
-		# null => ( $entry | get name | split row --number 2 ' ' | get 1 )
 		$s if ( $s | describe ) == string => $s
-		# _ => (error make $'Badly formed menuentry: ($entry.name)')
+		_ => (error make {msg: $"Badly formed menuentry: ($value | to nuon)"})
 	}
 }
 
 
 export alias "attr menuentry" = echo
-export def create_menu_entries_from_subcommands [ module_path:path ] {
+
+# Rows for show_menu from the subcommands of module_path.
+#
+# A subcommand with @menuentry uses that value as its label. A value that
+# cannot be rendered is an error. Other subcommands are left out unless
+# --include-non-menuentry-subcommands is set. With that flag, the label is the
+# doc-comment description, or the subcommand name when the description is empty.
+export def create_menu_entries_from_subcommands [
+	module_path:path
+	--include-non-menuentry-subcommands # Also list subcommands that have no @menuentry
+] {
 	scope commands
 	| where type == custom and is_sub == true
 	| where ($it.name | str starts-with $"($module_path | path basename) ")
 	| sort-by decl_id
+	| where {|m|
+		let has_menuentry = ($m.attributes | where name == 'menuentry' | is-not-empty)
+		$include_non_menuentry_subcommands or $has_menuentry
+	}
 	| each {|m|
 		let cmd = $m.name | split row ' ' | skip 1
+		let menuentry_attr = $m.attributes | where name == 'menuentry' | get 0?
 		{
 			label: (
-				match ($m.attributes | where name == 'menuentry' | get 0?.value) {
-					null => ($cmd | str join ' ')
-					$entry => ($entry | get_label)
+				if ($menuentry_attr | is-empty) {
+					let desc = $m.description
+					if ($desc | is-empty) { $cmd | str join ' ' } else { $desc }
+				} else {
+					$menuentry_attr.value | get_label
 				}
 			)
 			action: { nu $module_path ...$cmd }

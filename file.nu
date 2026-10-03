@@ -58,23 +58,43 @@ export def super_rename [] {
 # Create, Write, and Rename events on `file_path` trigger `--action`.
 # On each event, `file_path` is piped into `--action` as `$in`.
 # With no `--action`, the default is `{ nu $in }` (re-run the file as a Nu script).
+# `--module <name>` instead runs `use <name> <stem>` from `--cwd` (default `/tmp`)
+# and calls `<stem>`. That is the library import (`use nu-helpers arch`), not `nu arch.nu`.
+# The `use` line is written into the child script, because `use` is resolved at parse time.
 # Errors inside `--action` are caught so the watcher keeps running.
 # Press Ctrl+C to stop (watcher runs in a child job to reduce cancel noise).
 @search-terms watcher reload filesystem
 @example 'Re-run a script when it is saved' { run_on_change ./script.nu }
+@example 'Re-import a library module from another directory' { run_on_change arch.nu --module nu-helpers }
 @example 'Run tests whenever a file changes' { run_on_change ./app.nu --action { cargo test } }
 @example 'Use the watched path from the pipe' { run_on_change ./app.nu --action { ^wc -l $in } }
 @example 'Custom separator after each run' { run_on_change ./script.nu --show-after '====' }
 export def run_on_change [
   file_path: string # file to watch
   --action: closure # run on each change; receives `file_path` on the pipe as `$in` (default: { nu $in })
+  --module: string # parent module for `use <module> <stem>`; <stem> is the watched file's stem
+  --cwd: directory # directory of that import (default: /tmp). Only with --module
   --show-before: string # printed before each run
   --show-after: string = '---' # printed after each run
 ]: nothing -> nothing {
 
+  if (not ($module | is-empty)) and (not ($action | is-empty)) {
+    error make {msg: "pass either --module or --action"}
+  }
+  if ($module | is-empty) and (not ($cwd | is-empty)) {
+    error make {msg: "--cwd is only used with --module"}
+  }
+
   let target = $file_path | path parse | default --empty '.' parent
 
-  let action = $action | default {{ nu $in }}
+  let action = if ($module | is-empty) {
+    $action | default {{ nu $in }}
+  } else {
+    let run_from = $cwd | default '/tmp' | into string
+    let member = $target.stem
+    let script = $"cd ($run_from | to nuon); use ($module) ($member); ($member)"
+    { nu -c $script }
+  }
 
   # child job used to suppress terminal spam when cancelling watcher with CTRL+C
   let parent = job id
@@ -89,7 +109,7 @@ export def run_on_change [
     let ev = try { job recv } catch { null }
     if $ev == null { break }
     print $show_before
-    try { $file_path | do $action }
+    try { $file_path | do $action } catch {|err| print -e ($err.msg? | default $"($err)")}
     print $show_after
   }
   try { job kill $watcher } catch { null }
