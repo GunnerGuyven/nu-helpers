@@ -173,3 +173,37 @@ def "main sync pick" [] { aur-sync-only | print }
 def "main srcver" [] { aur-local-srcver | aur-list-present | collect | print }
 @menuentry "Pick Local Packages to Remove"
 def "main remove" [] { aur-local-cleanup }
+
+# Install this script as ~/.local/bin/arch.
+#
+# Rewrites an existing arch shim, including after this repo moves.
+# Leaves any other file at that path alone.
+export def "main link" [] {
+	let dest = $nu.home-dir | path join .local bin arch
+	mkdir ($dest | path dirname)
+	let body = [
+		"#!/bin/sh"
+		"# arch command shim"
+		$"exec nu '($self_path)' \"$@\""
+		""
+	] | str join (char nl)
+	let kind = $dest | path type | default "missing"
+
+	if $kind == "file" {
+		let current = open --raw $dest
+		if $current == $body {
+			chmod +x $dest
+			print $"($dest) already runs ($self_path)"
+			return
+		}
+		if ($current | lines | get 1?) != "# arch command shim" {
+			error make {msg: $"($dest) exists and is not an arch command shim"}
+		}
+	} else if $kind != "missing" {
+		error make {msg: $"($dest) exists and is a ($kind), not an arch command shim"}
+	}
+
+	$body | save --force $dest
+	chmod +x $dest
+	print $"($dest) runs ($self_path)"
+}
