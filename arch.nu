@@ -150,8 +150,8 @@ def "main test" [] {
 }
 
 const self_path = path self
-def main [--include-non-menuentry-subcommands] {
-  create_menu_entries_from_subcommands $self_path --include-non-menuentry-subcommands=$include_non_menuentry_subcommands
+def main [--show-all] {
+  create_menu_entries_from_subcommands $self_path --include-non-menuentry-subcommands=$show_all
   | append {label: ( "󰈆 Exit" | color red ) action: null}
   | show_menu
 }
