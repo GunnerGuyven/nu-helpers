@@ -98,16 +98,28 @@ export def show_prompt [
 # Pipe in rows with `label` (shown in the list) and `action` (closure to run,
 # or `null` / empty to exit). Selecting an entry with an action runs it, then
 # redisplays the menu; selecting an entry without an action breaks the loop.
+# `--append-exit` appends one more row, labeled `󰈆 Exit` in red, with a null
+# action. That row leaves the menu the same way a hand-written null action does.
 @search-terms menu interactive input list
 @example 'Simple yes/work/exit menu' {
-	[
-		[label action];
-		["Do work" { print "working" }]
-		["Exit" null]
-	] | show_menu
+  [
+    [label action];
+    ["Do work" { print "working" }]
+    ["Exit" null]
+  ] | show_menu
 }
-export def show_menu []: table<label:string, action:oneof<closure, nothing>> -> any {
-	let entries = $in
+@example 'Append Exit instead of writing that row' {
+  [
+    [label action];
+    ["Do work" { print "working" }]
+  ] | show_menu --append-exit
+}
+export def show_menu [
+	--append-exit # append a red Exit row with a null action
+]: table<label:string, action:oneof<closure, nothing>> -> any {
+	let entries = if ( $append_exit ) {
+		$in | append {label: ( "󰈆 Exit" | color red ) action: null}
+	} else { $in }
 
 	loop {
 		$entries | input list -d label
@@ -116,7 +128,6 @@ export def show_menu []: table<label:string, action:oneof<closure, nothing>> -> 
 		} else { break }
 	}
 }
-
 
 export def show_countdown [
 	how_long:duration

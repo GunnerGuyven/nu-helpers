@@ -88,3 +88,13 @@ const commands.
     - [ ] `AURDEST` is `~/aurpkgs` and that directory exists
     - [ ] `AUR_PAGER` is unset
     - [ ] `~/.config/aurutils/view/orderfile` contains `PKGBUILD`
+
+## nufmt fork
+
+A personal fork for style that upstream nufmt does not support. This repo's
+`nufmt.nuon` still indents the file with tabs.
+
+- [ ] Keep documentation elements space-aligned. `@example` bodies, and comment
+      lines whose indentation is part of the `help` display, use spaces rather
+      than tabs. `help` strips a leading tab on those lines. A tab indent for
+      the rest of the file must not rewrite them.
