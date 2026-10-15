@@ -67,6 +67,7 @@ const commands.
 - [ ] Package entry links to the project changelog (browser or tui)
 - [ ] Package entry links to the AUR package info page (browser or tui)
 - [ ] Support rebuild of srcver packages
+- [ ] 'Remove' should prompt to uninstall also
 - [ ] Setup tutorial and config check. Steps and expected values are those in
       `~/work/learning/aurtools/SETUP.md`
   - [ ] Tutorial command prints those setup instructions
