@@ -1,4 +1,4 @@
-# Run the menu fixtures.
+# Run the module fixtures.
 #
 # Each fixture exits 0 when its assertions hold. Fixtures run under
 # `nu --no-config-file` so the caller's display hook cannot change their output.
@@ -14,6 +14,7 @@ def main [] {
 		menu-bad-record.nu
 		menu-bad-number.nu
 		menu-bad-span.nu
+		pins-parse.nu
 	]
 	for name in $names {
 		let path = $dir | path join $name

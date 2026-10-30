@@ -2,6 +2,7 @@
 
 A collection of useful commands and code snippets for [Nushell](https://nushell.sh)
 
+- `0.1.2` 2026-10-30 : added Containerfile pin check (`pins check`)
 - `0.1.1` 2026-10-03 : added installer for arch helpers
 - `0.1.0` 2026-10-02 : added menu creation helper
 - `0.0.7` 2026-09-07 : added many options to install and maintain AUR packages
@@ -19,6 +20,10 @@ A collection of useful commands and code snippets for [Nushell](https://nushell.
 Clone this repository anywhere on your machine and symlink the project root in
 `~/.config/nushell/scripts/`. Then in your own script `use nu-helpers` will
 give you access to provided commands like `nu-helpers web get-site-cookies`.
+
+`nu-helpers pins check Containerfile` lists Alpine, PECL, and Microsoft ODBC
+pins in that file and then the pins with a newer published version. The same
+file can be run directly: `nu pins.nu Containerfile`.
 
 ## TODO
 
