@@ -245,7 +245,7 @@ def alpine-branch [text: string] {
 	$"v($branch_hit | first)"
 }
 
-# Print every pin in `containerfile`, then the pins with a newer published version.
+# Print every pin in `containerfile`. `should_change` is true when the published version is newer.
 export def check [containerfile: string] {
 	let text = (open --raw $containerfile)
 	let alpine = (alpine-pins $text)
@@ -275,25 +275,24 @@ export def check [containerfile: string] {
 			$pin | insert published $published
 		}
 	}
-	let pins = ($alpine_rows ++ $pecl_rows ++ $microsoft_rows | select package pinned published source)
-	let newer = (
-		$pins
-		| where {|row|
-			$row.published != "absent" and (version-is-newer $row.published $row.pinned)
-		}
-	)
 
-	print "Pinned packages"
-	$pins | print
-	print ""
-	print "Should change"
-	if ($newer | is-empty) {
-		print "Every pin matches."
-	} else {
-		$newer | print
+	$alpine_rows ++ $pecl_rows ++ $microsoft_rows
+	| each {|row|
+		$row | insert should_change (
+			$row.published != "absent" and (version-is-newer $row.published $row.pinned)
+		)
 	}
+	| select package pinned published should_change source
 }
 
-def main [containerfile: string] {
-	check $containerfile
+def main [containerfile?: string] {
+  if ( $containerfile | is-empty ) {
+    ls 
+    | where type == file
+    | where ($in.name | str lowercase ) in [containerfile dockerfile]
+    | first | tee { print ( $in.name | path expand ) }
+    | check $in.name
+  } else {
+    check $containerfile
+  }
 }

@@ -22,8 +22,8 @@ Clone this repository anywhere on your machine and symlink the project root in
 give you access to provided commands like `nu-helpers web get-site-cookies`.
 
 `nu-helpers pins check Containerfile` lists Alpine, PECL, and Microsoft ODBC
-pins in that file and then the pins with a newer published version. The same
-file can be run directly: `nu pins.nu Containerfile`.
+pins in that file. `should_change` is true when the published version is newer.
+The same file can be run directly: `nu pins.nu Containerfile`.
 
 ## TODO
 
