@@ -1,3 +1,5 @@
+use display.nu [color]
+
 # Compare pinned package versions in a Containerfile with the versions those sources publish now.
 #
 # Alpine `name=version` pins use the `FROM` line (`alpine3.24` -> v3.24) and the
@@ -15,11 +17,11 @@ def download-text [url: string] {
 }
 
 def version-parts [version: string] {
-	let with_rel = ($version | parse --regex '^(?P<upstream>.+)-r(?P<rel>[0-9]+)$')
+	let with_rel = $version | parse --regex '^(?P<upstream>.+)-r(?P<rel>[0-9]+)$'
 	let parts = if not ($with_rel | is-empty) {
 		$with_rel | first
 	} else {
-		let dashed = ($version | parse --regex '^(?P<upstream>.+)-(?P<rel>[0-9]+)$')
+		let dashed = $version | parse --regex '^(?P<upstream>.+)-(?P<rel>[0-9]+)$'
 		if not ($dashed | is-empty) {
 			$dashed | first
 		} else {
@@ -32,12 +34,12 @@ def version-parts [version: string] {
 	}
 }
 
-def cmp-list [left: list, right: list] {
+def cmp-list [left: list<any>, right: list<any>] {
 	if ($left | is-empty) and ($right | is-empty) {
 		0
 	} else {
-		let a = ($left | get --optional 0 | default 0)
-		let b = ($right | get --optional 0 | default 0)
+		let a = $left | get --optional 0 | default 0
+		let b = $right | get --optional 0 | default 0
 		if $a < $b {
 			-1
 		} else if $a > $b {
@@ -66,7 +68,7 @@ export def alpine-pins [text: string] {
 	$text
 	| lines
 	| each {|line|
-		let hit = ($line | parse --regex '\s*(?P<package>[A-Za-z0-9][A-Za-z0-9+_.-]*)=(?P<pinned>[0-9][A-Za-z0-9.+_-]*)')
+		let hit = $line | parse --regex '\s*(?P<package>[A-Za-z0-9][A-Za-z0-9+_.-]*)=(?P<pinned>[0-9][A-Za-z0-9.+_-]*)'
 		if ($hit | is-empty) {
 			null
 		} else {
@@ -85,7 +87,7 @@ export def pecl-pins [text: string] {
 		$line
 		| split row " "
 		| each {|token|
-			let hit = ($token | parse --regex '^(?P<package>pdo_sqlsrv|sqlsrv)-(?P<pinned>[0-9]+\.[0-9]+\.[0-9]+)$')
+			let hit = $token | parse --regex '^(?P<package>pdo_sqlsrv|sqlsrv)-(?P<pinned>[0-9]+\.[0-9]+\.[0-9]+)$'
 			if ($hit | is-empty) {
 				null
 			} else {
@@ -107,7 +109,7 @@ export def microsoft-pins [text: string] {
 		| split row " "
 		| where {|token| not ($token | is-empty)}
 		| each {|token|
-			let hit = ($token | parse --regex '(?P<package>msodbcsql18|mssql-tools18)_(?P<pinned>[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-[0-9]+)_amd64\.apk')
+			let hit = $token | parse --regex '(?P<package>msodbcsql18|mssql-tools18)_(?P<pinned>[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-[0-9]+)_amd64\.apk'
 			if ($hit | is-empty) {
 				null
 			} else {
@@ -132,14 +134,14 @@ export def alpine-index [branch: string, packages: list<string>] {
 	if ($packages | is-empty) {
 		return {}
 	}
-	let names = ($packages | str join ",")
+	let names = $packages | str join ","
 	[
 		$"https://dl-cdn.alpinelinux.org/alpine/($branch)/main/x86_64/APKINDEX.tar.gz"
 		$"https://dl-cdn.alpinelinux.org/alpine/($branch)/community/x86_64/APKINDEX.tar.gz"
 	]
 	| reduce --fold {} {|url, acc|
 		let dir = (mktemp --directory)
-		let archive = ($dir | path join "index.tar.gz")
+		let archive = $dir | path join "index.tar.gz"
 		let fetched = (^curl -fsSL --retry 2 -o $archive $url | complete)
 		if $fetched.exit_code != 0 {
 			rm --recursive --force $dir
@@ -171,7 +173,7 @@ export def alpine-index [branch: string, packages: list<string>] {
 		| lines
 		| where {|line| not ($line | is-empty)}
 		| reduce --fold $acc {|line, found|
-			let bits = ($line | split row "\t")
+			let bits = $line | split row "\t"
 			$found | upsert ($bits | get 0) ($bits | get 1)
 		}
 	}
@@ -180,8 +182,8 @@ export def alpine-index [branch: string, packages: list<string>] {
 # PECL stable version for `package`, from `rest/r/<package>/stable.txt`.
 export def pecl-stable [package: string] {
 	let url = $"https://pecl.php.net/rest/r/($package)/stable.txt"
-	let body = (download-text $url | str trim)
-	let ok = ($body | parse --regex '^[0-9]+\.[0-9]+\.[0-9]+$')
+	let body = download-text $url | str trim
+	let ok = $body | parse --regex '^[0-9]+\.[0-9]+\.[0-9]+$'
 	if ($ok | is-empty) {
 		error make {msg: $"download failed: ($url)"}
 	}
@@ -190,13 +192,15 @@ export def pecl-stable [package: string] {
 
 # `msodbcsql18` and `mssql-tools18` versions in the ODBC 18 Alpine section of `text`.
 export def microsoft-published [text: string] {
-	let start = ($text | str index-of "alpine18-install")
+	let start = $text | str index-of "alpine18-install"
 	if $start < 0 {
 		error make {msg: "no alpine18-install section"}
 	}
-	let rest = ($text | str substring $start..)
-	let end = ($rest | str index-of "alpine17-install")
-	let section = if $end < 0 { $rest } else { $rest | str substring ..<$end }
+	let rest = $text | str substring $start..
+	let end = $rest | str index-of "alpine17-install"
+	let section = if $end < 0 { $rest } else {
+		$rest | str substring ..<$end
+	}
 	[msodbcsql18 mssql-tools18]
 	| reduce --fold {} {|package, acc|
 		let marker = $"($package)_"
@@ -204,12 +208,12 @@ export def microsoft-published [text: string] {
 			$section
 			| lines
 			| each {|line|
-				let at = ($line | str index-of $marker)
+				let at = $line | str index-of $marker
 				if $at < 0 {
 					null
 				} else {
-					let tail = ($line | str substring ($at + ($marker | str length))..)
-					let hit = ($tail | parse --regex '^(?P<published>[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-[0-9]+)_')
+					let tail = $line | str substring ($at + ($marker | str length))..
+					let hit = $tail | parse --regex '^(?P<published>[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-[0-9]+)_'
 					if ($hit | is-empty) { null } else { $hit | first | get published }
 				}
 			}
@@ -223,9 +227,7 @@ export def microsoft-published [text: string] {
 }
 
 # Download Microsoft's ODBC install doc and return the Alpine 18 apk versions.
-export def microsoft-versions [
-	--url: string = "https://raw.githubusercontent.com/MicrosoftDocs/sql-docs/live/docs/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server.md"
-] {
+export def microsoft-versions [--url: string = "https://raw.githubusercontent.com/MicrosoftDocs/sql-docs/live/docs/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server.md"] {
 	microsoft-published (download-text $url)
 }
 
@@ -234,7 +236,7 @@ def alpine-branch [text: string] {
 		$text
 		| lines
 		| each {|line|
-			let hit = ($line | parse --regex 'alpine(?P<ver>[0-9]+\.[0-9]+)')
+			let hit = $line | parse --regex 'alpine(?P<ver>[0-9]+\.[0-9]+)'
 			if ($hit | is-empty) { null } else { $hit | first | get ver }
 		}
 		| compact
@@ -254,9 +256,9 @@ export def check [containerfile: string] {
 	let alpine_rows = if ($alpine | is-empty) {
 		[]
 	} else {
-		let index = (alpine-index (alpine-branch $text) ($alpine | get package))
+		let index = alpine-index (alpine-branch $text) ($alpine | get package)
 		$alpine | each {|pin|
-			let published = ($index | get --optional $pin.package)
+			let published = $index | get --optional $pin.package
 			$pin | insert published (if $published == null { "absent" } else { $published })
 		}
 	}
@@ -268,7 +270,7 @@ export def check [containerfile: string] {
 	} else {
 		let doc_versions = (microsoft-versions)
 		$microsoft | each {|pin|
-			let published = ($doc_versions | get --optional $pin.package)
+			let published = $doc_versions | get --optional $pin.package
 			if $published == null {
 				error make {msg: $"no ($pin.package) version in alpine18-install section"}
 			}
@@ -285,14 +287,24 @@ export def check [containerfile: string] {
 	| select package pinned published should_change source
 }
 
-def main [containerfile?: string] {
-  if ( $containerfile | is-empty ) {
-    ls 
-    | where type == file
-    | where ($in.name | str lowercase ) in [containerfile dockerfile]
-    | first | tee { print ( $in.name | path expand ) }
-    | check $in.name
-  } else {
-    check $containerfile
+def check-list-present [] {
+	each {|r|
+    let tone = if ( $r.should_change ) { 'blue' } else { 'grey' }
+    $r | update cells { color $tone }
+  } | reject should_change
+  | group-by source --prune 
+}
+
+export def main [containerfile?: string] {
+	let file = $containerfile | default { ls
+		| where type == file
+		| where ($in.name | str lowercase ) in [containerfile dockerfile]
+		| get 0?.name
   }
+	if ($file | is-empty) {
+		print 'Provide path to containerfile'
+	} else {
+		print ($file | path expand)
+		check $file | check-list-present
+	}
 }
