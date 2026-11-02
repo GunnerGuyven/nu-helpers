@@ -21,7 +21,7 @@ Clone this repository anywhere on your machine and symlink the project root in
 `~/.config/nushell/scripts/`. Then in your own script `use nu-helpers` will
 give you access to provided commands like `nu-helpers web get-site-cookies`.
 
-`nu-helpers pins check Containerfile` lists Alpine, PECL, and Microsoft ODBC
+`nu-helpers pins check Containerfile` lists Alpine, PECL, PIE, and Microsoft ODBC
 pins in that file. `should_change` is true when the published version is newer.
 The same file can be run directly: `nu pins.nu Containerfile`.
 

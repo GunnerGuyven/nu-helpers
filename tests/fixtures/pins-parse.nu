@@ -4,6 +4,7 @@ use ../../pins.nu [
 	version-is-newer
 	alpine-pins
 	pecl-pins
+	pie-pins
 	microsoft-pins
 	microsoft-published
 ]
@@ -25,12 +26,23 @@ def main [] {
 	pecl install sqlsrv-5.12.0 pdo_sqlsrv-5.12.0
 	curl -O https://example.test/msodbcsql18_18.7.1.1-1_amd64.apk
 	apk add msodbcsql18_18.7.1.1-1_amd64.apk mssql-tools18_18.6.1.1-1_amd64.apk
+	pie install --no-cache microsoft/sqlsrv-5.13.3 microsoft/pdo_sqlsrv:5.13.2
+	pie install asgrim/example-pie-extension-2.0.9 phpredis/phpredis:v6.3.0
+	pie install xdebug/xdebug:^3.4 microsoft/sqlsrv
 "
 
 	assert equal (alpine-pins $text | get package) ["curl" "brotli"]
 	assert equal (alpine-pins $text | get pinned) ["8.22.0-r0" "1.2.1-r0"]
 	assert equal (pecl-pins $text | get package) ["sqlsrv" "pdo_sqlsrv"]
 	assert equal (pecl-pins $text | get pinned) ["5.12.0" "5.12.0"]
+	assert equal (pie-pins $text | select package pinned) [
+		[package pinned];
+		["microsoft/sqlsrv" "5.13.3"]
+		["microsoft/pdo_sqlsrv" "5.13.2"]
+		["asgrim/example-pie-extension" "2.0.9"]
+		["phpredis/phpredis" "6.3.0"]
+	]
+	assert equal (pie-pins $text | get source | uniq) ["pie"]
 	assert equal (microsoft-pins $text | select package pinned) [
 		[package pinned];
 		[msodbcsql18 "18.7.1.1-1"]

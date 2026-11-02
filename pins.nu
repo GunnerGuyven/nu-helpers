@@ -4,7 +4,8 @@ use display.nu [color]
 #
 # Alpine `name=version` pins use the `FROM` line (`alpine3.24` -> v3.24) and the
 # x86_64 main and community indexes. `pecl install` names use PECL's stable
-# version. `msodbcsql18` and `mssql-tools18` apk filenames use the ODBC 18 Alpine
+# version. `pie install` names use the newest stable Packagist version.
+# `msodbcsql18` and `mssql-tools18` apk filenames use the ODBC 18 Alpine
 # block of Microsoft's install doc. A pin should change when the published
 # version is newer.
 
@@ -92,6 +93,30 @@ export def pecl-pins [text: string] {
 				null
 			} else {
 				$hit | first | insert source "pecl"
+			}
+		}
+	}
+	| flatten
+	| compact
+}
+
+# `pie install` package versions. `vendor/name-1.2.3` and `vendor/name:1.2.3`.
+# A leading `v` on the version is dropped. Constraints such as `^1.2` are not pins.
+export def pie-pins [text: string] {
+	$text
+	| lines
+	| where {|line| $line | str contains "pie install"}
+	| each {|line|
+		$line
+		| str replace --all "\t" " "
+		| split row " "
+		| where {|token| not ($token | is-empty)}
+		| each {|token|
+			let hit = $token | parse --regex '^(?P<package>[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*)(?::|-)v?(?P<pinned>[0-9]+(?:\.[0-9]+)+)$'
+			if ($hit | is-empty) {
+				null
+			} else {
+				$hit | first | insert source "pie"
 			}
 		}
 	}
@@ -190,6 +215,37 @@ export def pecl-stable [package: string] {
 	$body
 }
 
+# Newest stable Packagist version for a PIE package (`vendor/name`).
+export def pie-stable [package: string] {
+	let name = ($package | str lowercase)
+	let url = $"https://repo.packagist.org/p2/($name).json"
+	let body = (download-text $url | from json)
+	let versions = ($body.packages | get --optional $name)
+	if $versions == null {
+		error make {msg: $"download failed: ($url)"}
+	}
+	let stable = (
+		$versions
+		| get version
+		| each {|ver|
+			let stripped = if ($ver | str starts-with "v") {
+				$ver | str substring 1..
+			} else {
+				$ver
+			}
+			let ok = ($stripped | parse --regex '^[0-9]+(\.[0-9]+)+$')
+			if ($ok | is-empty) { null } else { $stripped }
+		}
+		| compact
+	)
+	if ($stable | is-empty) {
+		error make {msg: $"download failed: ($url)"}
+	}
+	$stable | reduce {|ver, newest|
+		if (version-is-newer $ver $newest) { $ver } else { $newest }
+	}
+}
+
 # `msodbcsql18` and `mssql-tools18` versions in the ODBC 18 Alpine section of `text`.
 export def microsoft-published [text: string] {
 	let start = $text | str index-of "alpine18-install"
@@ -252,6 +308,7 @@ export def check [containerfile: string] {
 	let text = (open --raw $containerfile)
 	let alpine = (alpine-pins $text)
 	let pecl = (pecl-pins $text)
+	let pie = (pie-pins $text)
 	let microsoft = (microsoft-pins $text)
 	let alpine_rows = if ($alpine | is-empty) {
 		[]
@@ -264,6 +321,9 @@ export def check [containerfile: string] {
 	}
 	let pecl_rows = (
 		$pecl | each {|pin| $pin | insert published (pecl-stable $pin.package)}
+	)
+	let pie_rows = (
+		$pie | each {|pin| $pin | insert published (pie-stable $pin.package)}
 	)
 	let microsoft_rows = if ($microsoft | is-empty) {
 		[]
@@ -278,7 +338,7 @@ export def check [containerfile: string] {
 		}
 	}
 
-	$alpine_rows ++ $pecl_rows ++ $microsoft_rows
+	$alpine_rows ++ $pecl_rows ++ $pie_rows ++ $microsoft_rows
 	| each {|row|
 		$row | insert should_change (
 			$row.published != "absent" and (version-is-newer $row.published $row.pinned)
