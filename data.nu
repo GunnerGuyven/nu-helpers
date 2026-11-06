@@ -1,27 +1,32 @@
 const sqlline_path_default = '~/.local/share/sqlline/'
 
-def setup [--sqlline-path:path] {
+def setup_sqlline [--sqlline-path:path --update] {
+  let maven_root = 'https://repo1.maven.org/maven2/sqlline/sqlline'
+  let maven_meta = 'maven-metadata.xml'
 
   let sqlline_path = $sqlline_path | default $sqlline_path_default | path expand
+  mkdir $sqlline_path
+  cd $sqlline_path
 
-  let maven_root = "https://repo1.maven.org/maven2/sqlline/sqlline"
-  let version = http get $"($maven_root)/maven-metadata.xml"
-  | get content | where tag == versioning 
-  | get content.0 | where tag == release
-  | get content.0.content.0
+  if ( not ( $maven_meta | path exists ) or $update) {
+    print "sqlline: updating information"
+    http get $"($maven_root)/($maven_meta)" | save -f $maven_meta
+  }
+
+  let version = open $maven_meta | get content
+  | where tag == versioning | get content.0
+  | where tag == release | get content.0.content.0
 
   let jar_name = $"sqlline-($version)-jar-with-dependencies.jar"
 
-  mkdir $sqlline_path
-
-  if ( ls --short-names $sqlline_path | where name == $jar_name | is-empty ) {
-    http get $"($maven_root)/($version)/($jar_name)" 
-    | save --raw ($sqlline_path | path join $jar_name) --progress
+  if not ($jar_name | path exists) {
+    print $"sqlline: downloading release ($version)"
+    http get $"($maven_root)/($version)/($jar_name)"
+    | save --raw $jar_name --progress
   } # else { print "already downloaded" }
 
-  $sqlline_path | path join $jar_name
+  $jar_name | path expand
 }
-
 
 export def sqlline [
   jdbc_driver_path: path
@@ -32,7 +37,8 @@ export def sqlline [
   --sql:string
   --sql-file:path
 ] {
-  let sqlline_path = setup
+  let sqlline_path = setup_sqlline
+  let jdbc_driver_path = $jdbc_driver_path | path expand
   let class_path = $sqlline_path | append $jdbc_driver_path | str join ':'
 
   ( java -cp $class_path sqlline.SqlLine
@@ -48,5 +54,6 @@ export def sqlline [
 }
 
 # def main [] {
-#   sqlline a b x y z --sql-file abc
+#   setup_sqlline
+#   # sqlline a b x y z --sql-file abc
 # }
